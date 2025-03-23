@@ -9,7 +9,7 @@ import re
 
 # Set your OpenAI API key and base URL
 openai = OpenAI(
-    api_key= "my key", # Replace with your actual DeepInfra token
+    api_key= "sk-7c563985e05342108b5f27245c59b167", # Replace with your actual DeepInfra token
     base_url="https://api.deepseek.com",
 )
 stream = False  # Set to True if you want to stream the response
@@ -42,7 +42,7 @@ def extract_from_response(response, patterns, names):
     # remove formatting
     response = response.replace("**", "")
     response = response.replace("__", "")
-    response = response.replace("```", "")
+    response.replace("```", "")
     # try each pattern
     for pattern in patterns:
         match = pattern.search(response)
@@ -243,6 +243,10 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
 
 
 if __name__ == "__main__":
-    input_file='news_llm_sent_AAPL.csv'
-    output_file= model_used + '_' + input_file
-    process_csv(r'C:\\Users\\lenovo-pc\Documents\\GitHub\\FinRL_DeepSeek\\'+input_file, r'C:\\Users\\lenovo-pc\Documents\\GitHub\\FinRL_DeepSeek\\'+output_file, batch_size=4)
+    input_file = 'news_llm_sent_AAPL.csv'
+    output_file = model_used + '_' + input_file
+    process_csv(
+        rf'C:\Users\lenovo-pc\Documents\GitHub\FinRL_DeepSeek\{input_file}', 
+        rf'C:\Users\lenovo-pc\Documents\GitHub\FinRL_DeepSeek\{output_file}', 
+        batch_size=4
+    )
