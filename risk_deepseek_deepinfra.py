@@ -26,7 +26,12 @@ PATTERN_SEP = r"\n(.*\n)*?"
 PATTERN_ANSWER = r".+"
 PATTERN_FLOAT = r"\d*\.?\d+"
 PROMPT_EXAMPLE_FIVE_SHOT_SCORES = [0.80, 0.43, 0.71, 0.34, 0.08] # redo it as needed
-
+response_patterns = [
+        re.compile(fr"(Risk: |Answer: )(?P<score>{PATTERN_ANSWER}){PATTERN_SEP}Probability: (?P<confidence>{PATTERN_FLOAT})"),
+        re.compile(fr"(Risk: |Answer: )?(?P<score>{PATTERN_ANSWER})\n+(Probability: )?(?P<confidence>{PATTERN_FLOAT})"),
+        re.compile(fr"(Risk: |Answer: )?(?P<score>{PATTERN_ANSWER})(, |. |; | - | \| )(Probability: )?(?P<confidence>{PATTERN_FLOAT})"),
+        re.compile(fr"(Risk: |Answer: )?(?P<score>{PATTERN_ANSWER}) \((Probability: )?(?P<confidence>{PATTERN_FLOAT})\)"),
+    ]
 # I added them from the prompt conf paper
 def normalize_confidence(confidence, normalize_fn):
     if confidence is not None:
@@ -51,26 +56,25 @@ def extract_from_response(response, patterns, names):
     else:
         return (None for _ in names)
 def extract_answer(responses):
-        risks, confporbs = [], []
-        for response in responses.split(','): 
-            score, confidence = extract_from_response(response, response_patterns, ("score", "confidence"))
-            try:
+    risks, confprobs = [], []
+    for response in responses.split(','): 
+        score, confidence = extract_from_response(response, response_patterns, ("score", "confidence"))
+        try:
                 risk_value = int(score.strip())
-                confidence = int(confidence.strip())
-            except ValueError:
+                conf_value = int(confidence.strip())
+        except ValueError:
                 print("content error")
                 print(' content is: ' + str(score.strip()))
                 risk_value = np.nan
                 print(' content is: ' + str(confidence.strip()))
-                confidence = np.nan
-            #confidence = normalize_confidence(confidence)
-            
+                conf_value = np.nan
+            #confidence = normalize_confidence(confidence)           
             # filter out confidence scores used in few-shot examples
-            if confidence in PROMPT_EXAMPLE_FIVE_SHOT_SCORES:
+        if confidence in PROMPT_EXAMPLE_FIVE_SHOT_SCORES:
                 confidence = None
-            risks.append(score)
-            confprobs.append(confidence)
-        return risks, confprobs
+        risks.append(score)
+        confprobs.append(confidence)
+    return risks, confprobs
     
 def get_risk(symbol, date, *texts):
     texts = [text for text in texts if text != 0]
@@ -90,15 +94,9 @@ def get_risk(symbol, date, *texts):
         {"role": "user", "content": text_content},
     ]
     
-    response_patterns = [
-        re.compile(fr"(Risk: |Answer: )(?P<score>{PATTERN_ANSWER}){PATTERN_SEP}Probability: (?P<confidence>{PATTERN_FLOAT})"),
-        re.compile(fr"(Risk: |Answer: )?(?P<score>{PATTERN_ANSWER})\n+(Probability: )?(?P<confidence>{PATTERN_FLOAT})"),
-        re.compile(fr"(Risk: |Answer: )?(?P<score>{PATTERN_ANSWER})(, |. |; | - | \| )(Probability: )?(?P<confidence>{PATTERN_FLOAT})"),
-        re.compile(fr"(Risk: |Answer: )?(?P<score>{PATTERN_ANSWER}) \((Probability: )?(?P<confidence>{PATTERN_FLOAT})\)"),
-    ]
 
-    risks = []
-    confprobs = []
+    #risks = []
+    #confprobs = []
     try:
         chat_completion = openai.chat.completions.create(
           #  model="meta-llama/Llama-3.3-70B-Instruct",
@@ -129,12 +127,14 @@ def get_risk(symbol, date, *texts):
         print("response error")
         risk_value = np.nan
         risks.append(risk_value)
-        return risks
+        confprobs.append(risk_value)
+        return risks, confprobs
     except Exception as e:
         print(f"Error: {e}")
         risk_value = np.nan
         risks.append(risk_value)
-        return risks
+        confprobs.append(risk_value)
+        return risks, confprobs
     
     
     risks, confprobs = extract_answer(content)
@@ -245,4 +245,4 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
 if __name__ == "__main__":
     input_file='news_llm_sent_AAPL.csv'
     output_file= model_used + '_' + input_file
-    process_csv(r'C:\Users\lenovo-pc\Documents\GitHub\FinRL_DeepSeek\\'+input_file, r'C:\Users\lenovo-pc\Documents\GitHub\FinRL_DeepSeek\\'+output_file, batch_size=4)
+    process_csv(r'C:\\Users\\lenovo-pc\Documents\\GitHub\\FinRL_DeepSeek\\'+input_file, r'C:\\Users\\lenovo-pc\Documents\\GitHub\\FinRL_DeepSeek\\'+output_file, batch_size=4)
