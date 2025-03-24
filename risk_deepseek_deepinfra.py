@@ -22,9 +22,9 @@ model_used='risk_deepseek'
 # I need to fix those , espicially this PATTERN_ANSWER
 NO_ANSWER_TEXT = "NO ANSWER"
 PROMPT_NO_ANSWER = f"If you cannot provide an answer, answer with `{NO_ANSWER_TEXT}`."
-PATTERN_SEP = r"\n(.*\n)*?"
-PATTERN_ANSWER = r".+"
-PATTERN_FLOAT = r"\d*\.?\d+"
+PATTERN_SEP = rf"\n(.*\n)*?"
+PATTERN_ANSWER = rf".+" # I need to fix this to be a number INT
+PATTERN_FLOAT = rf"\d*\.?\d+"
 PROMPT_EXAMPLE_FIVE_SHOT_SCORES = [0.80, 0.43, 0.71, 0.34, 0.08] # redo it as needed
 response_patterns = [
         re.compile(fr"(Risk: |Answer: )(?P<score>{PATTERN_ANSWER}){PATTERN_SEP}Probability: (?P<confidence>{PATTERN_FLOAT})"),
@@ -55,13 +55,14 @@ def extract_from_response(response, patterns, names):
         return None
     else:
         return (None for _ in names)
+
 def extract_answer(responses):
     risks, confprobs = [], []
     for response in responses.split(','): 
         score, confidence = extract_from_response(response, response_patterns, ("score", "confidence"))
         try:
-                risk_value = int(score.strip())
-                conf_value = int(confidence.strip())
+            risk_value = int(score.strip()) if score else np.nan
+            conf_value = float(confidence.strip()) if confidence else np.nan
         except ValueError:
                 print("content error")
                 print(' content is: ' + str(score.strip()))
@@ -74,6 +75,7 @@ def extract_answer(responses):
                 confidence = None
         risks.append(score)
         confprobs.append(confidence)
+    print('this risks from extract answer function == ', risks)
     return risks, confprobs
     
 def get_risk(symbol, date, *texts):
@@ -95,8 +97,8 @@ def get_risk(symbol, date, *texts):
     ]
     
 
-    #risks = []
-    #confprobs = []
+    risks = []
+    confprobs = []
     try:
         chat_completion = openai.chat.completions.create(
           #  model="meta-llama/Llama-3.3-70B-Instruct",
@@ -157,6 +159,7 @@ def get_risk(symbol, date, *texts):
 #             conf_value = np.nan
 #     confprobs.append(confidence)
 #     print(risks, cpnfprobs)
+    print('this risks from get_risk function == ', risks)
     return risks, confprobs
 
 def from_csv_get_risk(df, saving_path, batch_size=4):
@@ -215,11 +218,12 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
             continue
 
         chunk.columns = chunk.columns.str.capitalize()
-        if model_used not in chunk.columns:
+        if model_used & model_used+'conf' not in chunk.columns:
             chunk[model_used] = np.nan
+            chunk[model_used+'conf'] = np.nan
 
         for i in range(0, len(chunk), batch_size):
-            global batch
+            #global batch
             batch = chunk.iloc[i:i + batch_size] 
             #print('the symbol == ', batch.columns) 
             texts = batch['Lsa_summary'].tolist()
@@ -231,10 +235,12 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
             for j, risk in enumerate(risks):
                 if i + j < len(chunk):
                     chunk.loc[chunk.index[i + j], model_used] = risk
-            for j, conf in enumerate(confprobs):
-                if i + j < len(chunk):
-                    chunk.loc[chunk.index[i + j], model_used+'conf'] = conf
-                    
+                    chunk.loc[chunk.index[i + j], model_used+'conf'] = confprobs[j]
+#            for j, conf in enumerate(confprobs):
+#                if i + j < len(chunk):
+#                    chunk.loc[chunk.index[i + j], model_used+'conf'] = conf
+            print(f"Processed chunk {chunk} with risks {risks}") 
+            break 
         # Append the processed chunk to the output file
         chunk.to_csv(output_csv_path, mode='a', header=not os.path.exists(output_csv_path), index=False)
 
