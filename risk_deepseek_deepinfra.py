@@ -252,24 +252,41 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
             chunk[model_used] = np.nan
         if  model_used+'conf' not in chunk.columns:
             chunk[model_used+'conf'] = np.nan
-
         for i in range(0, len(chunk), batch_size):
-            #global batch
-            batch = chunk.iloc[i:i + batch_size] 
-            #print('the symbol == ', batch.columns) 
+            batch = chunk.iloc[i:i + batch_size]
             texts = batch['Lsa_summary'].tolist()
-            symbol = batch.iloc[0]['Stock_symbol']  # Extract the stock symbol for the current batch
+            symbol = batch.iloc[0]['Stock_symbol']
             date = batch.iloc[0]['Date']
-            #print(date)
             risks, confprobs = get_risk(symbol, date, *texts)
+            
+            # Pad results to match batch_size
+            risks += [np.nan] * (batch_size - len(risks))
+            confprobs += [np.nan] * (batch_size - len(confprobs))
+            
+            # Assign values using iloc
+            for j in range(batch_size):
+                if i + j >= len(chunk):
+                    break
+                chunk.iloc[i + j, chunk.columns.get_loc(model_used)] = risks[j]
+                chunk.iloc[i + j, chunk.columns.get_loc(model_used+'conf')] = confprobs[j]
+            
+            print(f"Processed batch {i//batch_size}: Risks={risks}")
 
-            for j, (risk, conf) in enumerate(zip(risks, confprobs)):
-                if i + j < len(chunk):
-                    chunk.loc[chunk.index[i + j], model_used] = risk
-                    chunk.loc[chunk.index[i + j], model_used+'conf'] = conf
-#            for j, conf in enumerate(confprobs):
+#        for i in range(0, len(chunk), batch_size):
+            #global batch
+#            batch = chunk.iloc[i:i + batch_size] 
+            #print('the symbol == ', batch.columns) 
+#            texts = batch['Lsa_summary'].tolist()
+#            symbol = batch.iloc[0]['Stock_symbol']  # Extract the stock symbol for the current batch
+ #           date = batch.iloc[0]['Date']
+            #print(date)
+#            risks, confprobs = get_risk(symbol, date, *texts)
+
+#            for j, (risk, conf) in enumerate(zip(risks, confprobs)):
 #                if i + j < len(chunk):
+#                    chunk.loc[chunk.index[i + j], model_used] = risk
 #                    chunk.loc[chunk.index[i + j], model_used+'conf'] = conf
+
             #print(f"Processed chunk {chunk} with risks {risks}") 
             #break 
         # Append the processed chunk to the output file
