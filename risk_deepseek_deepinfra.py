@@ -55,6 +55,7 @@ def extract_from_response(response, patterns, names):
         return None
     else:
         return (None for _ in names)
+    print('this is the extract from response == ', match.group(names))
 
 def extract_answer(responses):
     risks, confprobs = [], []
