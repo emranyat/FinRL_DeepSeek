@@ -23,7 +23,7 @@ model_used='risk_deepseek'
 NO_ANSWER_TEXT = "NO ANSWER"
 PROMPT_NO_ANSWER = f"If you cannot provide an answer, answer with `{NO_ANSWER_TEXT}`."
 PATTERN_SEP = rf"\n(.*\n)*?"
-PATTERN_ANSWER = rf".+" # I need to fix this to be a number INT
+PATTERN_ANSWER = rf"\d+" # I need to fix this to be a number INT
 PATTERN_FLOAT = rf"\d*\.?\d+"
 PROMPT_EXAMPLE_FIVE_SHOT_SCORES = [0.80, 0.43, 0.71, 0.34, 0.08] # redo it as needed
 response_patterns = [
@@ -218,8 +218,9 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
             continue
 
         chunk.columns = chunk.columns.str.capitalize()
-        if model_used & model_used+'conf' not in chunk.columns:
+        if model_used not in chunk.columns:
             chunk[model_used] = np.nan
+        if  model_used+'conf' not in chunk.columns:
             chunk[model_used+'conf'] = np.nan
 
         for i in range(0, len(chunk), batch_size):
