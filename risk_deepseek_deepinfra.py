@@ -23,7 +23,7 @@ model_used='risk_deepseek'
 NO_ANSWER_TEXT = "NO ANSWER"
 PROMPT_NO_ANSWER = f"If you cannot provide an answer, answer with `{NO_ANSWER_TEXT}`."
 PATTERN_SEP = rf"\n(.*\n)*?"
-PATTERN_ANSWER = rf"\d+" # I need to fix this to be a number INT
+PATTERN_ANSWER = rf"\b[1-5]\b" # I need to fix this to be a number INT
 PATTERN_FLOAT = rf"\d*\.?\d+"
 PROMPT_EXAMPLE_FIVE_SHOT_SCORES = [0.80, 0.43, 0.71, 0.34, 0.08] # redo it as needed
 response_patterns = [
@@ -56,7 +56,7 @@ def extract_from_response(response, patterns, names):
                 return match.group(names)
             else:
                 return (match.group(name) for name in names)
-    print('this is the extract from response == ', match.group(names))
+    #print('this is the extract from response == ', match.group(names))
     if isinstance(names, str):
         return None
     else:
@@ -82,7 +82,7 @@ def extract_answer(responses):
                 confidence = None
         risks.append(score)
         confprobs.append(confidence)
-    print('this risks from extract answer function == ', risks)
+    #print('this risks from extract answer function == ', risks)
     return risks, confprobs
 
 def extract_answer(response):
@@ -187,7 +187,7 @@ def get_risk(symbol, date, *texts):
 #             conf_value = np.nan
 #     confprobs.append(confidence)
 #     print(risks, cpnfprobs)
-    print('this risks from get_risk function == ', risks)
+    #print('this risks from get_risk function == ', risks)
     return risks, confprobs
 
 def from_csv_get_risk(df, saving_path, batch_size=4):
@@ -270,8 +270,8 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
 #            for j, conf in enumerate(confprobs):
 #                if i + j < len(chunk):
 #                    chunk.loc[chunk.index[i + j], model_used+'conf'] = conf
-            print(f"Processed chunk {chunk} with risks {risks}") 
-            break 
+            #print(f"Processed chunk {chunk} with risks {risks}") 
+            #break 
         # Append the processed chunk to the output file
         # In process_csv():
         header = not os.path.exists(output_csv_path)  # Write header only once
