@@ -103,15 +103,14 @@ def extract_answer(response):
         confprobs.append(conf_value)
     return risks, confprobs
     
-def get_risk(symbol, date, *texts):
-    texts = [text for text in texts if text != 0]
-    num_text = len(texts)
-    text_content = " ".join([f"### News to Stock Symbol -- {symbol}: {text}" for text in texts])
-    #print(text_content)
-    #Provide your best guess and the probability between 0.0 and 1.0 that your best guess is correct or plausible for the given task. Take your uncertainty in the prompt, the task difficulty, your knowledge availability and other sources of uncertainty into account. Use the following format to respond:\n```\nGuess: [most likely guess, as short as possible, only the guess]\nProbability: [probability between 0.0 and 1.0 that your guess is correct, without comments, only the probability]\n```\n{PROMPT_NO_ANSWER} {self.PROMPT_EXAMPLE_FIVE_SHOT}",
+def get_risk(symbol, date, text):
+    #texts = [text for text in texts if text != 0]
+    #num_text = len(texts) #{num_text} summarized news will be passed in each time.
+    text_content = f"### News to Stock Symbol -- {symbol}: {text}"
+    ##text_content = " ".join([f"### News to Stock Symbol -- {symbol}: {text}" for text in texts])
     conversation = [
         {"role": "system",
-         "content": f"Forget all your previous instructions. You are a financial expert specializing in risk assessment for stock recommendations in the date of {date}. You have no knowledge of events, prices, or news after the date of {date}. Based on a specific stock, provide a risk score from 1 to 5, where: 1 indicates very low risk, 2 indicates low risk, 3 indicates moderate risk (default if the news lacks any clear indication of risk), 4 indicates high risk, and 5 indicates very high risk. {num_text} summarized news will be passed in each time. Also provide your probability that your risk score is correct between 0.00 and 1.00. Take your uncertainty in the prompt, the task difficulty, your knowledge availability and other sources of uncertainty into account. Use the following format to respond:\n```\nRisk: [most likely risk score, as a single number]\nProbability: [probability between 0.0 and 1.0 that your risk score is correct, without comments, only the probability]. Provide the score and the probability in the format shown below in the response from the assistant."},
+         "content": f"Forget all your previous instructions. You are a financial expert specializing in risk assessment for stock recommendations in the date of {date}. You have no knowledge of events, prices, or news after the date of {date}. Based on a specific stock, provide a risk score from 1 to 5, where: 1 indicates very low risk, 2 indicates low risk, 3 indicates moderate risk (default if the news lacks any clear indication of risk), 4 indicates high risk, and 5 indicates very high risk. Also provide your probability that your risk score is correct between 0.00 and 1.00. Take your uncertainty in the prompt, the task difficulty, your knowledge availability and other sources of uncertainty into account. Use the following format to respond:\n```\nRisk: [most likely risk score, as a single number]\nProbability: [probability between 0.0 and 1.0 that your risk score is correct, without comments, only the probability]. Provide the score and the probability in the format shown below in the response from the assistant."},
         {"role": "user",
          "content": f"News to Stock Symbol -- AAPL: Apple (AAPL) increases 45% ### News to Stock Symbol -- AAPL: Apple (AAPL) price might decrease ### News to Stock Symbol -- MSFT: Microsoft (MSFT) price has no change"},
         {"role": "assistant", "content": f"Risk: 1 \nProbability: 0.80, Risk: 5 \nProbability: 0.43, Risk: 3 \nProbability: 0.71"},  # Risk assessment applied: no major risk indication for 22% increase, high risk for 30% decrease, neutral for no change.
@@ -190,7 +189,7 @@ def get_risk(symbol, date, *texts):
     #print('this risks from get_risk function == ', risks)
     return risks, confprobs
 
-def from_csv_get_risk(df, saving_path, batch_size=4):
+""" def from_csv_get_risk(df, saving_path, batch_size=4):
     df.sort_values(by=model_used, ascending=False, na_position='last', inplace=True)
     if 'New_text' in df.columns:
         df.rename(columns={'New_text': 'Lsa_summary'}, inplace=True)
@@ -220,8 +219,8 @@ def from_csv_get_risk(df, saving_path, batch_size=4):
         df.to_csv(saving_path, index=False)  # Save the entire DataFrame with all columns
     return df
 
-
-def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
+ """
+ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
     start_time = time.time()
 
     # Check if the output file exists and load the last processed row
@@ -239,8 +238,26 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
     on_bad_lines='warn', 
     engine='python'     # Print a warning for each skipped line
     )
+    # new from here
+    for chunk in chunks:
+        chunk = chunk.reset_index(drop=True)
+        if model_used not in chunk.columns:
+            chunk[model_used] = np.nan
+        if model_used+'conf' not in chunk.columns:
+            chunk[model_used+'conf'] = np.nan
+        for i in range(len(chunk)):
+            if pd.notna(chunk.loc[i, model_used]):
+                continue
+            text = chunk.loc[i, 'Lsa_summary']
+            symbol = chunk.loc[i, 'Stock_symbol']
+            date = chunk.loc[i, 'Date']
+            risks, confprobs = get_risk(symbol, date, text)
+            chunk.loc[i, model_used] = risks[0] if risks else np.nan
+            chunk.loc[i, model_used+'conf'] = confprobs[0] if confprobs else np.nan
+        # Save the chunk
+        chunk.to_csv(output_csv_path, mode='a', header=not os.path.exists(output_csv_path), index=False)
 
-    for chunk_number, chunk in enumerate(chunks):
+    """ for chunk_number, chunk in enumerate(chunks):
         # Skip already processed chunks
         if chunk_number * chunk_size < last_processed_row:
             continue
@@ -269,8 +286,8 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
                     break
                 chunk.iloc[i + j, chunk.columns.get_loc(model_used)] = risks[j]
                 chunk.iloc[i + j, chunk.columns.get_loc(model_used+'conf')] = confprobs[j]
-            
-            print(f"Processed batch {i//batch_size}: Risks={risks}")
+             """
+            ##print(f"Processed batch {i//batch_size}: Risks={risks}")
 
 #        for i in range(0, len(chunk), batch_size):
             #global batch
@@ -291,8 +308,8 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
             #break 
         # Append the processed chunk to the output file
         # In process_csv():
-        header = not os.path.exists(output_csv_path)  # Write header only once
-        chunk.to_csv(output_csv_path, mode='a', header=header, index=False)
+        ##header = not os.path.exists(output_csv_path)  # Write header only once
+        ##chunk.to_csv(output_csv_path, mode='a', header=header, index=False)
         #chunk.to_csv(output_csv_path, mode='a', header=not os.path.exists(output_csv_path), index=False)
 
     print(f"Process completed in {time.time() - start_time:.2f} seconds.")
