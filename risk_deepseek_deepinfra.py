@@ -32,6 +32,11 @@ response_patterns = [
         re.compile(fr"(Risk: |Answer: )?(?P<score>{PATTERN_ANSWER})(, |. |; | - | \| )(Probability: )?(?P<confidence>{PATTERN_FLOAT})"),
         re.compile(fr"(Risk: |Answer: )?(?P<score>{PATTERN_ANSWER}) \((Probability: )?(?P<confidence>{PATTERN_FLOAT})\)"),
     ]
+PATTERN_ANSWER = r"\b[1-5]\b"  # Ensures risk scores are integers 1-5
+response_patterns = [
+    re.compile(fr"Risk:?\s*(?P<score>{PATTERN_ANSWER})\D+(Probability:?\s*)?(?P<confidence>{PATTERN_FLOAT})", re.IGNORECASE),
+    re.compile(fr"Answer:?\s*(?P<score>{PATTERN_ANSWER}).*?Probability:?\s*(?P<confidence>{PATTERN_FLOAT})", re.IGNORECASE),
+]
 # I added them from the prompt conf paper
 def normalize_confidence(confidence, normalize_fn):
     if confidence is not None:
@@ -78,6 +83,24 @@ def extract_answer(responses):
         risks.append(score)
         confprobs.append(confidence)
     print('this risks from extract answer function == ', risks)
+    return risks, confprobs
+
+def extract_answer(response):
+    risks, confprobs = [], []
+    # Split responses by "Risk:" delimiter
+    entries = re.split(r'(?=\bRisk:\s*\d+)', response)
+    for entry in entries:
+        if not entry.strip():
+            continue
+        score, confidence = extract_from_response(entry, response_patterns, ("score", "confidence"))
+        try:
+            risk_value = int(score.strip()) if score else np.nan
+            conf_value = float(confidence.strip()) if confidence else np.nan
+        except:
+            risk_value = np.nan
+            conf_value = np.nan
+        risks.append(risk_value)
+        confprobs.append(conf_value)
     return risks, confprobs
     
 def get_risk(symbol, date, *texts):
@@ -140,8 +163,11 @@ def get_risk(symbol, date, *texts):
         confprobs.append(risk_value)
         return risks, confprobs
     
-    
+    # After extracting content:
+    print(f"Raw API Response: {content}")  # Debug output
     risks, confprobs = extract_answer(content)
+    print(f"Parsed Risks: {risks}, Confidences: {confprobs}")  # Debug parsed values
+    #risks, confprobs = extract_answer(content)
     
 #     for risk in content.split(','):
 #         try:
@@ -182,7 +208,7 @@ def from_csv_get_risk(df, saving_path, batch_size=4):
             continue
         print(f"Processing row {i} with date: {date}")
 
-        risks, confprobs = get_risk(symbol, *texts, date)
+        risks, confprobs = get_risk(symbol, date, *texts)
 
         for k, risk in enumerate(risks):
             if i + k < len(df):
@@ -218,6 +244,8 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
         # Skip already processed chunks
         if chunk_number * chunk_size < last_processed_row:
             continue
+        # Inside the chunk loop:
+        chunk = chunk.reset_index(drop=True)  # Reset index for clean .iloc access
 
         chunk.columns = chunk.columns.str.capitalize()
         if model_used not in chunk.columns:
@@ -235,17 +263,20 @@ def process_csv(input_csv_path, output_csv_path, batch_size=5, chunk_size=1000):
             #print(date)
             risks, confprobs = get_risk(symbol, date, *texts)
 
-            for j, risk in enumerate(risks):
+            for j, (risk, conf) in enumerate(zip(risks, confprobs)):
                 if i + j < len(chunk):
                     chunk.loc[chunk.index[i + j], model_used] = risk
-                    chunk.loc[chunk.index[i + j], model_used+'conf'] = confprobs[j]
+                    chunk.loc[chunk.index[i + j], model_used+'conf'] = conf
 #            for j, conf in enumerate(confprobs):
 #                if i + j < len(chunk):
 #                    chunk.loc[chunk.index[i + j], model_used+'conf'] = conf
             print(f"Processed chunk {chunk} with risks {risks}") 
             break 
         # Append the processed chunk to the output file
-        chunk.to_csv(output_csv_path, mode='a', header=not os.path.exists(output_csv_path), index=False)
+        # In process_csv():
+        header = not os.path.exists(output_csv_path)  # Write header only once
+        chunk.to_csv(output_csv_path, mode='a', header=header, index=False)
+        #chunk.to_csv(output_csv_path, mode='a', header=not os.path.exists(output_csv_path), index=False)
 
     print(f"Process completed in {time.time() - start_time:.2f} seconds.")
     
