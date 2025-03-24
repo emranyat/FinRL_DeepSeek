@@ -51,11 +51,12 @@ def extract_from_response(response, patterns, names):
                 return match.group(names)
             else:
                 return (match.group(name) for name in names)
+    print('this is the extract from response == ', match.group(names))
     if isinstance(names, str):
         return None
     else:
         return (None for _ in names)
-    print('this is the extract from response == ', match.group(names))
+    
 
 def extract_answer(responses):
     risks, confprobs = [], []
