@@ -1,0 +1,12 @@
+# Parameters for the Parallel API Requester
+# Ensure the appropriate values  are configured to avoid API request or token request rejections due to limit overreaches.
+provider: deepseek
+model_name: deepseek-chat
+max_tokens: 50
+temperature: 0.0
+request_rate_limit: 100
+token_rate_limit: 20000
+return_in_json_format: False
+cost_print_interval: 100 # print cost every k requests are completed
+budget: 15 # in dollars
+    
