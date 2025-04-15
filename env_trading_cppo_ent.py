@@ -312,8 +312,6 @@ class StockTradingEnv(gym.Env):
             #llm_sentiments = self.data[self.llm_sentiment_col].values  # Get LLM sentiment for all stocks
             #actions = np.where(llm_sentiments > 0, actions, 0)  # Example: Only execute actions where sentiment > 0
         #RESUME HERE
-          
-           
             actions = actions * self.hmax  # actions initially is scaled between 0 to 1
             actions = actions.astype(
                 int

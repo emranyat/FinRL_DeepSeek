@@ -422,8 +422,8 @@ def cppo(env_fn,
         llm_score_conf = obs[0, -2*stock_dimension:-stock_dimension]  # confidence in LLM score
         risk_score = obs[0, -3*stock_dimension:-2*stock_dimension]  # risk score
         risk_score_conf = obs[0, -stock_dimension:]  # confidence in risk score
-        print('risk score == ', risk_score)
-        print('risk conf == ', risk_score_conf)
+        #print('risk score == ', risk_score)
+        #print('risk conf == ', risk_score_conf)
         #llm_score_conf = obs[0, -stock_dimension:]
        # print('llm score', llm_score, 'llm conf ==', llm_score_conf)
         if not torch.all(risk_score == 0) and not torch.all(risk_score_conf == 0):
