@@ -5,7 +5,7 @@ import pandas as pd
 #from finrl.agents.stablebaselines3.models import DRLAgent
 from finrl.config import INDICATORS, TRAINED_MODEL_DIR, RESULTS_DIR
 from finrl.main import check_and_make_directories
-from env_trading_ppo_ent_llm01 import StockTradingEnv
+from env_trading_ppo_ent import StockTradingEnv
 
 check_and_make_directories([TRAINED_MODEL_DIR])
 
@@ -704,7 +704,7 @@ trained_ppo=ppo(lambda : args.env, actor_critic=MLPActorCritic,
 
 
 # Save the model
-model_path = TRAINED_MODEL_DIR + "/agent_ppo_llm10_ent1_100_epochs_20k_steps.pth"
+model_path = TRAINED_MODEL_DIR + "/agent_ppo_ent1_100_epochs_20k_steps.pth"
 torch.save(trained_ppo.state_dict(), model_path)
 print("Training finished and saved in " + model_path)
 # Load the model

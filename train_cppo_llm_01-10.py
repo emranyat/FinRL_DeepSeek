@@ -81,10 +81,10 @@ train = train.set_index('new_idx') """
 #train.columns = ['date', 'title', 'tic', 'link', 'writer', 'open', 'volume', 'adjcp', 'adjhp', 'adjlp', 'adjop', 'llm_sentiment', 'llm_risk', 'confidence']
 #missing values with 0
 train['llm_sentiment'].fillna(0, inplace=True) #0 is outside scope of sentiment scores (min is 1)
-train[ 'Confidence_Sen'].fillna(0, inplace=True) #0 is outside scope of sentiment scores (min is 1)
+train[ 'Confidence_Sen'].fillna(1, inplace=True) #0 is outside scope of sentiment scores (min is 1)
 
 train['llm_risk'].fillna(3, inplace=True) #neutral risk score is 3
-train[ 'Confidence_Risk'].fillna(0, inplace=True) #neutral risk score is 3
+train[ 'Confidence_Risk'].fillna(1, inplace=True) #neutral risk score is 3
 
 print(train.isnull().sum()) #check for missing values
 
